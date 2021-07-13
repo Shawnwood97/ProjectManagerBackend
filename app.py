@@ -3,8 +3,14 @@ import json
 import traceback
 import sys
 import mariadb
+import users
 
 app = Flask(__name__)
+
+
+@app.post('/api/users')
+def call_create_user():
+  return users.create_user()
 
 
 if(len(sys.argv) > 1):

@@ -109,6 +109,14 @@ def input_handler(endpoint_args, u_inputs=[]):
   for u_input in u_inputs:
     # u_input will be a dictionry
     try:
+      if(u_input.get('rule') != None and endpoint_args.get(u_input['name']) != None):
+        result = u_input['rule'](endpoint_args[u_input['name']])
+
+        if(result['success'] == False):
+          payload['success'] = False
+          payload['error'] = result['message']
+          return payload
+
       # if the user input is required, we add a key value pair inside the data dictionary in payload. key will be the value from name, and value will be
       # the the value of name as a key in endpoint_args, wrapped in the type value.
       # ie: loginToken: str(request.json['loginToken'])
