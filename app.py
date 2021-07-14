@@ -13,6 +13,21 @@ def call_create_user():
   return users.create_user()
 
 
+@app.get('/api/users')
+def call_list_user():
+  return users.list_user()
+
+
+@app.patch('/api/users')
+def call_update_user():
+  return users.update_user()
+
+
+@app.patch('/api/users/password')
+def call_change_password():
+  return users.change_password()
+
+
 if(len(sys.argv) > 1):
   mode = sys.argv[1]
 else:
