@@ -104,6 +104,7 @@ def list_user():
   result = dbh.run_query('SELECT id, u.username, u.email, u.status, u.avatar, u.created_at FROM users u WHERE u.id = ?', [
                          parsed_args['user_id'], ])
 
+  # error check on above query
   if(result['success'] == False):
     return result['error']
 
@@ -116,44 +117,105 @@ def list_user():
     return Response("User not found!", mimetype="text/plain", status=404)
 
 
-# def update_user():
-#   arg_scheme = [
-#       {
-#           'required': True,
-#           'name': 'login_token',
-#           'type': str
-#       },
-#       {
-#           'required': False,
-#           'name': 'email',
-#           'type': str
-#       },
-#       {
-#           'required': False,
-#           'name': 'username',
-#           'rule': rules.username_checker,
-#           'type': str
-#       },
-#       {
-#           'required': False,
-#           'name': 'status',
-#           'type': str
-#       },
-#       {
-#           'required': False,
-#           'name': 'avatar',
-#           'type': str
-#       },
-#   ]
-#   parsed_args = dbh.input_handler(request.json, arg_scheme)
+def update_user():
+  # get required and optional data from user.
+  arg_scheme = [
+      {
+          'required': True,
+          'name': 'login_token',
+          'type': str
+      },
+      {
+          'required': False,
+          'name': 'email',
+          'type': str
+      },
+      {
+          'required': False,
+          'name': 'username',
+          'rule': rules.username_checker,
+          'type': str
+      },
+      {
+          'required': False,
+          'name': 'status',
+          'type': str
+      },
+      {
+          'required': False,
+          'name': 'avatar',
+          'type': str
+      },
+  ]
+  # pass data through input_handler function from dbh file.
+  parsed_args = dbh.input_handler(request.json, arg_scheme)
 
-#   if(parsed_args['success'] == False):
-#     return parsed_args['error']
-#   else:
-#     parsed_args = parsed_args['data']
+  # if helper function returns non successful, return error Response.
+  # else set parsed args to the data key from parsed args for more readable code.
+  if(parsed_args['success'] == False):
+    return parsed_args['error']
+  else:
+    parsed_args = parsed_args['data']
+
+  # base update sql statement
+  sql = "UPDATE users u INNER JOIN sessions s ON u.id = s.user_id SET"
+  # empty params list to append valid args to.
+  params = []
+
+  # if any args from above != None or an empty string, add to sql statement and append arg to params
+  if(parsed_args.get('email') != None and parsed_args.get('email') != ''):
+    sql += " u.email = ?,"
+    params.append(parsed_args['email'])
+  if(parsed_args.get('username') != None and parsed_args.get('username') != ''):
+    sql += " u.username = ?,"
+    params.append(parsed_args['username'])
+  if(parsed_args.get('status') != None and parsed_args.get('status') != ''):
+    sql += " u.status = ?,"
+    params.append(parsed_args['status'])
+  if(parsed_args.get('avatar') != None and parsed_args.get('avatar') != ''):
+    sql += " u.avatar = ?,"
+    params.append(parsed_args['avatar'])
+
+  # if params has a length that is not 0, append login_token arg to params.
+  # remove the trailing comma from the above sql blocks
+  # add WHERE clause to sql statement.
+  # else, auth error.
+  if(len(params) != 0):
+    params.append(parsed_args['login_token'])
+    sql = sql[:-1]
+    sql += " WHERE s.token = ?"
+  else:
+    return Response("Authorization Error!", mimetype="text/plain", status=403)
+
+  # run the full query from above through run_query function and store it in the result variable
+  # so we can do the error check below.
+  result = dbh.run_query(sql, params)
+
+  # check result variable to see if not successful.
+  if(result['success'] == False):
+    return result['error']
+
+  # after success from above, get all user data for the endpoint to return.
+  # TODO look back at this later and see how many other endpoints we use this in, maybe a helper function will make this more clean.
+  updated_user_info = dbh.run_query(
+      'SELECT u.id, u.email, u.username, u.status, u.avatar FROM users u INNER JOIN sessions s ON u.id = s.user_id WHERE s.token = ?', [parsed_args['login_token'], ])
+
+  # error check for above statement.
+  if(updated_user_info['success'] == False):
+    return updated_user_info['error']
+
+  # if length of the data key equals 1, create the json dump for the data key at index 0 (so it's a dict not a list.)
+  # else error response, for getting users after update, since we know the update would have happened.
+  if(len(updated_user_info['data']) == 1):
+    user_info_json = json.dumps(updated_user_info['data'][0], default=str)
+    return Response(user_info_json, mimetype="application/json", status=201)
+  else:
+    traceback.print_exc()
+    return Response("Error getting user after update!", mimetype="text/plain", status=404)
 
 
 def change_password():
+  # TODO come back later and switch all current tokens to inactive on a password change for security.
   # get all required inputs for changing a password.
   arg_scheme = [
       {
@@ -211,8 +273,64 @@ def change_password():
   else:
     return Response("Authorization Error", mimetype="text/plain", status=403)
 
+  # error check result variable from above.
   if(result['success'] == False):
     return result['error']
 
+  # if data key is equal to 1(rowcount) return status 204 (no content)
   if(result['data'] == 1):
     return Response(status=204)
+
+
+def delete_user():
+  # get all required inputs for deleting a user.
+  arg_scheme = [
+      {
+          'required': True,
+          'name': 'login_token',
+          'type': str
+      },
+      {
+          'required': True,
+          'name': 'password',
+          'type': str
+      }
+  ]
+  parsed_args = dbh.input_handler(request.json, arg_scheme)
+
+  if(parsed_args['success'] == False):
+    return parsed_args['error']
+  else:
+    parsed_args = parsed_args['data']
+
+  # get email from the user based on the passed login_token, for getting the salt using the get_salt helper from dbh file.
+  result = dbh.run_query("SELECT u.email FROM users u INNER JOIN `sessions` s ON u.id = s.user_id WHERE s.token = ?", [
+                         parsed_args['login_token'], ])
+
+  # error check result from above
+  if(result['success'] == False):
+    return result['error']
+
+  # if length of data key from result variable is 1, get the salt using the email, add the salt to the passed password and hash it.
+  # else, authorization error.
+  if(len(result['data']) == 1):
+    salt = dbh.get_salt(result['data'][0]['email'])
+    parsed_args['password'] = salt + parsed_args['password']
+    parsed_args['password'] = hashlib.sha512(
+        parsed_args['password'].encode()).hexdigest()
+  else:
+    return Response("Authorization Error!", mimetype="text/plain", status=403)
+
+  # Delete user from users table and set result variable to the return, which will have a data key that will be 1(rowcount) if successful.
+  result = dbh.run_query(
+      "DELETE u FROM users u INNER JOIN `sessions` s ON u.id = s.user_id WHERE u.password = ? AND s.token = ?", [parsed_args['password'], parsed_args['login_token']])
+
+  # error check result variabble.
+  if(result['success'] == False):
+    return result['error']
+
+  # if data key has a value of 1, return Response status 204 (no content)
+  if(result['data'] == 1):
+    return Response(status=204)
+  else:
+    return Response("Authentication Error!", mimetype="text/plain", status=403)

@@ -23,6 +23,11 @@ def call_update_user():
   return users.update_user()
 
 
+@app.delete('/api/users')
+def call_delete_user():
+  return users.delete_user()
+
+
 @app.patch('/api/users/password')
 def call_change_password():
   return users.change_password()
