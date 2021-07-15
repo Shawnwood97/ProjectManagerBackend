@@ -4,6 +4,7 @@ import traceback
 import sys
 import mariadb
 import users
+import login
 
 app = Flask(__name__)
 
@@ -31,6 +32,11 @@ def call_delete_user():
 @app.patch('/api/users/password')
 def call_change_password():
   return users.change_password()
+
+
+@app.post('/api/login')
+def call_login_user():
+  return login.login_user()
 
 
 if(len(sys.argv) > 1):

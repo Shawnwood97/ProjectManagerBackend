@@ -159,10 +159,18 @@ def create_salt():
 
 # function that takes username or email of the user as their "identity" and returns their salt from the DB for adding to the password before hashing.
 def get_salt(identity):
-  user = run_query("SELECT u.salt FROM users u WHERE u.username = ? OR u.email = ?", [
-                   identity, identity])
-  print(user)
-  if(len(user['data']) == 1):
-    return user['data'][0]['salt']
+  payload = {
+      'success': True,
+      'error': None,
+      'data': {}
+  }
+  result = run_query("SELECT u.salt FROM users u WHERE u.username = ? OR u.email = ?", [
+      identity, identity])
+  print(result)
+  if(len(result['data']) == 1):
+    payload['data'] = result['data']
   else:
-    return Response("Authorization Error!", mimetype="text/plain", status=403)
+    payload['success'] = False
+    payload['error'] = Response(
+        "Authorization Error!", mimetype="text/plain", status=403)
+  return payload

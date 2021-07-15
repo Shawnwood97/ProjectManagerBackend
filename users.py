@@ -314,8 +314,12 @@ def delete_user():
   # if length of data key from result variable is 1, get the salt using the email, add the salt to the passed password and hash it.
   # else, authorization error.
   if(len(result['data']) == 1):
-    salt = dbh.get_salt(result['data'][0]['email'])
-    parsed_args['password'] = salt + parsed_args['password']
+    salt_result = dbh.get_salt(result['data'][0]['email'])
+    # error check.
+    if(salt_result['success'] == False):
+      return salt_result['error']
+    parsed_args['password'] = salt_result['data'][0]['salt'] + \
+        parsed_args['password']
     parsed_args['password'] = hashlib.sha512(
         parsed_args['password'].encode()).hexdigest()
   else:
