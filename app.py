@@ -5,8 +5,11 @@ import sys
 import mariadb
 import users
 import login
+import project
 
 app = Flask(__name__)
+
+#! =========== /API/USERS ENDPOINT ============
 
 
 @app.post('/api/users')
@@ -28,15 +31,57 @@ def call_update_user():
 def call_delete_user():
   return users.delete_user()
 
+#! =========== /API/USERS/PASSWORD ENDPOINT ============
+
 
 @app.patch('/api/users/password')
 def call_change_password():
   return users.change_password()
 
+#! =========== /API/LOGIN ENDPOINT ============
+
 
 @app.post('/api/login')
 def call_login_user():
   return login.login_user()
+
+
+@app.delete('/api/login')
+def call_logout_user():
+  return login.logout_user()
+
+#! =========== /API/PROJECT ENDPOINT ============
+
+
+@app.post('/api/project')
+def call_create_project():
+  return project.create_project()
+
+
+@app.delete('/api/project')
+def call_delete_project():
+  return project.delete_project()
+
+#! =========== /API/PROJECTS/OWNED ENDPOINT ============
+
+
+@app.get('/api/projects/owned')
+def call_list_owned_projects():
+  return project.list_owned_projects()
+
+#! =========== /API/PROJECTS/ACCEPTED ENDPOINT ============
+
+
+@app.get('/api/projects/accepted')
+def call_list_accepted_projects():
+  return project.list_accepted_projects()
+
+#! =========== /API/PROJECTS/INVITED ENDPOINT ============
+
+
+@app.get('/api/projects/invited')
+def call_list_invited_projects():
+  return project.list_invited_projects()
 
 
 if(len(sys.argv) > 1):

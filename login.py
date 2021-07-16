@@ -127,6 +127,7 @@ def logout_user():
   else:
     parsed_args = parsed_args['data']
 
+  # TODO come back and make this an update and set the session end column to the current time.
   # run the query and store the result(rowcount) in a variable
   result = dbh.run_query('DELETE s from sessions s WHERE s.token = ?', [
                          parsed_args['login_token'], ])

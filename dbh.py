@@ -166,7 +166,7 @@ def get_salt(identity):
   }
   result = run_query("SELECT u.salt FROM users u WHERE u.username = ? OR u.email = ?", [
       identity, identity])
-  print(result)
+
   if(len(result['data']) == 1):
     payload['data'] = result['data']
   else:
