@@ -25,3 +25,16 @@ def username_checker(test_str):
     payload['message'] = Response(
         "Username is not long enough!", mimetype="text/plain", status=400)
   return payload
+
+
+def role_checker(num):
+  payload = {
+      'success': True,
+      'message': None
+  }
+
+  if(num != 1 and num != 2):
+    payload['success'] = False
+    payload['message'] = Response(
+        "Invalid role_id", mimetype="text/plain", status=400)
+  return payload

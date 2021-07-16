@@ -6,6 +6,7 @@ import mariadb
 import users
 import login
 import project
+import projectInvite
 
 app = Flask(__name__)
 
@@ -82,6 +83,13 @@ def call_list_accepted_projects():
 @app.get('/api/projects/invited')
 def call_list_invited_projects():
   return project.list_invited_projects()
+
+#! =========== /API/PROJECT/INVITE ENDPOINT ============
+
+
+@app.post('/api/project/invite')
+def call_invite_user():
+  return projectInvite.invite_user()
 
 
 if(len(sys.argv) > 1):
