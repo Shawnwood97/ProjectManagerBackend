@@ -155,34 +155,3 @@ def list_accepted_projects():
   # we shouldn't need an auth error here, if the login token is invalid has no accepted projects, we will just return an empty list.
   user_json = json.dumps(result['data'], default=str)
   return Response(user_json, mimetype='application/json', status=200)
-
-
-def list_invited_projects():
-  # Get required data, run it through input handler with endpoint argument check for errors and
-  # store the data key in parsed_args variable for later.
-  arg_scheme = [
-      {
-          'required': True,
-          'name': 'login_token',
-          'type': str
-      }
-  ]
-  parsed_args = dbh.input_handler(request.args, arg_scheme)
-
-  if(parsed_args['success'] == False):
-    return parsed_args['error']
-  else:
-    parsed_args = parsed_args['data']
-
-  # store return of this select query in the result variable, will be either list of projects the user has been invited to access, but has
-  # not accepted or declined or an empty list.
-  result = dbh.run_query("SELECT p.id, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN sessions s ON pr.user_id = s.user_id WHERE pr.accepted = 0 AND s.token = ?", [
-                         parsed_args['login_token'], ])
-
-  # error check
-  if(result['success'] == False):
-    return result['error']
-
-  # we shouldn't need an auth error here, if the login token is invalid user has no pending invites, we will just return an empty list.
-  user_json = json.dumps(result['data'], default=str)
-  return Response(user_json, mimetype='application/json', status=200)

@@ -38,3 +38,16 @@ def role_checker(num):
     payload['message'] = Response(
         "Invalid role_id", mimetype="text/plain", status=400)
   return payload
+
+
+def invite_checker(num):
+  payload = {
+      'success': True,
+      'message': None
+  }
+
+  if(num != 0 and num != 1):
+    payload['success'] = False
+    payload['message'] = Response(
+        "Invalid accept_invite value passed!", mimetype="text/plain", status=400)
+  return payload

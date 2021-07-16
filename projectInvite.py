@@ -114,3 +114,108 @@ def invite_user():
         default=str
     )
     return Response(new_invite_json, mimetype="application/json", status=201)
+
+
+def list_pending_invites():
+  # Get required data, run it through input handler with endpoint argument check for errors and
+  # store the data key in parsed_args variable for later.
+  arg_scheme = [
+      {
+          'required': True,
+          'name': 'login_token',
+          'type': str
+      }
+  ]
+  parsed_args = dbh.input_handler(request.args, arg_scheme)
+
+  if(parsed_args['success'] == False):
+    return parsed_args['error']
+  else:
+    parsed_args = parsed_args['data']
+
+  # store return of this select query in the result variable, will be either list of projects the user has been invited to access, but has
+  # not accepted or declined or an empty list.
+  result = dbh.run_query("SELECT p.id, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN sessions s ON pr.user_id = s.user_id WHERE pr.accepted = 0 AND s.token = ?", [
+                         parsed_args['login_token'], ])
+
+  # error check
+  if(result['success'] == False):
+    return result['error']
+
+  # we shouldn't need an auth error here, if the login token is invalid user has no pending invites, we will just return an empty list.
+  user_json = json.dumps(result['data'], default=str)
+  return Response(user_json, mimetype='application/json', status=200)
+
+
+def invite_response():
+  # Get required data, run it through input handler with endpoint argument check for errors and
+  # store the data key in parsed_args variable for later.
+  arg_scheme = [
+      {
+          'required': True,
+          'name': 'project_id',
+          'type': int
+      },
+      {
+          'required': True,
+          'name': 'login_token',
+          'type': str
+      },
+      {
+          'required': True,
+          'name': 'accept_invite',
+          'rule': rules.invite_checker,
+          'type': int
+      }
+  ]
+  parsed_args = dbh.input_handler(request.json, arg_scheme)
+
+  if(parsed_args['success'] == False):
+    return parsed_args['error']
+  else:
+    parsed_args = parsed_args['data']
+
+  # we run our full select that we will use for the return here because we need the pr.id since we allow duplicate rows for the same user_id
+  # this seemed to be the best way to always be able to target the same invite.
+  # Validated with login token on the project roles user_id, as well only selects a row that has an accepted column of 0(pending)
+  # based on our logic from sending the invite, there can only be 1 row for each project and user combination that has an accepted
+  # row of 0.
+  project_inv_info = dbh.run_query("SELECT pr.id, pr.project_id, pr.user_id, pr.role_id, pr.accepted, pr.created_at FROM project_roles pr INNER JOIN sessions s ON pr.user_id = s.user_id WHERE s.token = ? AND pr.project_id = ? AND pr.accepted = 0", [
+                                   parsed_args['login_token'], parsed_args['project_id']])
+
+  # error check
+  if(project_inv_info['success'] == False):
+    return project_inv_info['error']
+
+  # if length of data key is 0, auth error, this will ensure we error on bad login token and bad project_id
+  if(len(project_inv_info['data']) == 0):
+    return Response("Authorization Error!", mimetype="text/plain", status=403)
+
+  # base update statement, no inner join because we already completed our verification with the above select
+  sql = "UPDATE project_roles pr SET"
+
+  # if accept_invite is 1(true) set the accepted column in the row to 1(accepted) and concat the sql
+  # if accept_invite is 0(false) set the accepted column in the row to 2(declined) and concat the sql
+  # if the accepted column is 0, that means it is pending.
+  if(parsed_args['accept_invite'] == 1):
+    sql += " pr.accepted = 1"
+    project_inv_info['data'][0]['accepted'] = 1
+  elif(parsed_args['accept_invite'] == 0):
+    sql += " pr.accepted = 2"
+    project_inv_info['data'][0]['accepted'] = 2
+
+  # concat the WHERE clause, we just use the pr.id and id key from our select since we already did validation
+  sql += " WHERE pr.id = ?"
+
+  result = dbh.run_query(sql, [project_inv_info['data'][0]['id'], ])
+
+  # error check
+  if(result['success'] == False):
+    return result['error']
+
+  # if update returned a rowcount, dump json and respond with it.
+  # cant imagine any other errors being able to happen, meaning we likely dont need this if.
+  if(result['data'] > 0):
+    updated_project_role_json = json.dumps(
+        project_inv_info['data'][0], default=str)
+    return Response(updated_project_role_json, mimetype="application/json", status=201)
