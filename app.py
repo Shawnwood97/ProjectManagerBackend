@@ -63,6 +63,17 @@ def call_create_project():
 def call_delete_project():
   return project.delete_project()
 
+
+@app.get('/api/project')
+def call_get_project():
+  return project.get_project()
+
+
+@app.patch('/api/project')
+def call_update_project():
+  return project.update_project()
+
+
 #! =========== /API/PROJECTS/OWNED ENDPOINT ============
 
 
