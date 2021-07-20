@@ -8,6 +8,7 @@ import login
 import project
 import projectinvite
 import projecttasks
+import projectlanes
 
 app = Flask(__name__)
 
@@ -122,6 +123,23 @@ def call_update_task():
 @app.delete('/api/tasks')
 def call_delete_task():
   return projecttasks.delete_task()
+
+#! =========== /API/TASK ENDPOINT ============
+
+
+@app.patch('/api/lanes')
+def call_update_lane():
+  return projectlanes.update_lane()
+
+
+@app.post('/api/lanes')
+def call_create_lane():
+  return projectlanes.create_lane()
+
+
+@app.delete('/api/lanes')
+def call_delete_lane():
+  return projectlanes.delete_lane()
 
 
 if(len(sys.argv) > 1):
