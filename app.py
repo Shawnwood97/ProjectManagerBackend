@@ -7,6 +7,7 @@ import users
 import login
 import project
 import projectinvite
+import projecttasks
 
 app = Flask(__name__)
 
@@ -104,6 +105,23 @@ def call_list_pending_invites():
 @app.patch('/api/project/invite')
 def call_invite_response():
   return projectinvite.invite_response()
+
+#! =========== /API/TASK ENDPOINT ============
+
+
+@app.post('/api/tasks')
+def call_create_task():
+  return projecttasks.create_task()
+
+
+@app.patch('/api/tasks')
+def call_update_task():
+  return projecttasks.update_task()
+
+
+@app.delete('/api/tasks')
+def call_delete_task():
+  return projecttasks.delete_task()
 
 
 if(len(sys.argv) > 1):
