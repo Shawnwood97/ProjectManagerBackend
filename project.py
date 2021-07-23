@@ -154,7 +154,7 @@ def list_accepted_projects():
 
   # store return of this select query in the result variable, will be either list of projects the user has accepted access to
   #  or an empty list.
-  result = dbh.run_query("SELECT p.id, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN sessions s ON pr.user_id = s.user_id WHERE pr.accepted = 1 AND s.token = ?", [
+  result = dbh.run_query("SELECT p.id, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN sessions s ON pr.user_id = s.user_id WHERE pr.accepted = 1 AND s.token = ? and p.owner_id != s.user_id", [
                          parsed_args['login_token'], ])
 
   # error check
@@ -205,7 +205,7 @@ def get_project():
   if(project_result['success'] == False):
     return project_result['error']
 
-  lanes_result = dbh.run_query("SELECT pl.id, pl.title, pl.created_at FROM project_lanes pl WHERE pl.project_id = ?", [
+  lanes_result = dbh.run_query("SELECT pl.id, pl.title, pl.task_order, pl.created_at FROM project_lanes pl WHERE pl.project_id = ?", [
                                parsed_args['project_id'], ])
 
   if(lanes_result['success'] == False):
@@ -225,10 +225,10 @@ def get_project():
 
   project_json = json.dumps(
       {
-          'project_id': project_result['data'][0]['id'],
+          'id': project_result['data'][0]['id'],
           'can_edit': user_result['data'][0]['can_edit'],
-          'project_title': project_result['data'][0]['title'],
-          'project_owner': project_result['data'][0]['owner_id'],
+          'title': project_result['data'][0]['title'],
+          'owner': project_result['data'][0]['owner_id'],
           'created_at': project_result['data'][0]['created_at'],
           'lanes': lanes_result['data']
       },

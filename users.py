@@ -71,13 +71,14 @@ def create_user():
 
   if(result_token['success'] == False):
     return result_token['error']
-
   # json dump for our response.
   new_user_json = json.dumps(
       {
           'id': result['data'],
-          'email': parsed_args['email'],
           'username': parsed_args['username'],
+          'email': parsed_args['email'],
+          'status': 'null',
+          'avatar': 'https://cdn.discordapp.com/attachments/841266201657344010/841266288486907914/ABSRlIpzcqh_JEyZP1CW1_RaZDO34zgsV3wfGtpwfn_D3IB6XFnQjvFl5nkymDIEJ58dpJoA1-t8agaWloWXJhVz9WWaXYVIbkkj.png',
           'login_token': login_token
       },
       default=str)

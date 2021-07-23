@@ -57,6 +57,22 @@ def create_task():
 
   # if the data key of the result variable is greater than 0(lastrowid), return data back to the user
   if(result['data'] > 0):
+    task_order_result = dbh.run_query(
+        "SELECT task_order FROM project_lanes WHERE id = ?", [parsed_args['lane_id'], ])
+    if(task_order_result['success'] == False):
+      return task_order_result['error']
+
+    task_order = json.loads(
+        task_order_result['data'][0]['task_order'])
+
+    task_order.append(result['data'])
+
+    lane_result = dbh.run_query(
+        "UPDATE project_lanes SET task_order = ? WHERE id = ?", [json.dumps(task_order), parsed_args['lane_id']])
+
+    if(lane_result['success'] == False):
+      return lane_result['error']
+
     new_lane_json = json.dumps(
         {
             'id': result['data'],
@@ -84,6 +100,11 @@ def update_task():
           'required': False,
           'name': 'description',
           'type': str
+      },
+      {
+          'required': False,
+          'name': 'lane_id',
+          'type': int
       },
       {
           'required': True,
@@ -127,6 +148,9 @@ def update_task():
   if(parsed_args.get('description') != None and parsed_args.get('description') != ''):
     sql += " pt.description = ?,"
     params.append(parsed_args['description'])
+  if(parsed_args.get('lane_id') != None and parsed_args.get('lane_id') != ''):
+    sql += " pt.lane_id = ?,"
+    params.append(parsed_args['lane_id'])
 
   # if params has a length that is not 0, append login_token arg to params.
   # remove the trailing comma from the above sql blocks
