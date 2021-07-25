@@ -129,6 +129,8 @@ def input_handler(endpoint_args, u_inputs=[]):
         if(endpoint_args.get(u_input['name']) != None and endpoint_args.get(u_input['name']) != ''):
           payload['data'][u_input['name']] = u_input['type'](
               endpoint_args[u_input['name']])
+        else:
+          payload['data'][u_input['name']] = None
     # exceptions that set the success key to False and the response to f strings to be more specific about what went wrong.
     except ValueError:
       traceback.print_exc()

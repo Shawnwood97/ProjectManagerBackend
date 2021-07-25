@@ -103,6 +103,11 @@ def update_task():
       },
       {
           'required': False,
+          'name': 'accent_hex',
+          'type': str
+      },
+      {
+          'required': False,
           'name': 'lane_id',
           'type': int
       },
@@ -115,6 +120,21 @@ def update_task():
           'required': True,
           'name': 'login_token',
           'type': str
+      },
+      {
+          'required': False,
+          'name': 'new_index',
+          'type': int
+      },
+      {
+          'required': False,
+          'name': 'old_index',
+          'type': int
+      },
+      {
+          'required': False,
+          'name': 'old_lane_id',
+          'type': int
       }
   ]
   parsed_args = dbh.input_handler(request.json, arg_scheme)
@@ -136,43 +156,83 @@ def update_task():
   if(len(user_result['data']) == 0):
     return Response("Authorization Error!", mimetype="text/plain", status=403)
 
-  # base update sql statement
-  sql = "UPDATE project_tasks pt SET"
-  # empty params list to append valid args to.
-  params = []
+  if(parsed_args['lane_id'] != None):
+    # base update sql statement
+    sql = "UPDATE project_tasks pt SET"
+    # empty params list to append valid args to.
+    params = []
 
-  # if args from above != None or an empty string, add to sql statement and append arg to params
-  if(parsed_args.get('title') != None and parsed_args.get('title') != ''):
-    sql += " pt.title = ?,"
-    params.append(parsed_args['title'])
-  if(parsed_args.get('description') != None and parsed_args.get('description') != ''):
-    sql += " pt.description = ?,"
-    params.append(parsed_args['description'])
-  if(parsed_args.get('lane_id') != None and parsed_args.get('lane_id') != ''):
-    sql += " pt.lane_id = ?,"
-    params.append(parsed_args['lane_id'])
+    # if args from above != None or an empty string, add to sql statement and append arg to params
+    if(parsed_args['title'] != None and parsed_args['title'] != ''):
+      sql += " pt.title = ?,"
+      params.append(parsed_args['title'])
+    if(parsed_args['description'] != None and parsed_args['description'] != ''):
+      sql += " pt.description = ?,"
+      params.append(parsed_args['description'])
+    if(parsed_args['lane_id'] != None and parsed_args['lane_id'] != ''):
+      sql += " pt.lane_id = ?,"
+      params.append(parsed_args['lane_id'])
+    if(parsed_args['accent_hex'] != None and parsed_args['accent_hex'] != ''):
+      sql += " pt.accent_hex = ?,"
+      params.append(parsed_args['accent_hex'])
 
-  # if params has a length that is not 0, append login_token arg to params.
-  # remove the trailing comma from the above sql blocks
-  # add WHERE clause to sql statement.
-  # else, error.
-  if(len(params) != 0):
-    params.append(parsed_args['task_id'])
-    sql = sql[:-1]
-    sql += " WHERE pt.id = ?"
-  else:
-    return Response("Unknown Error", mimetype="text/plain", status=400)
+    # if params has a length that is not 0, append login_token arg to params.
+    # remove the trailing comma from the above sql blocks
+    # add WHERE clause to sql statement.
+    # else, error.
+    if(len(params) != 0):
+      params.append(parsed_args['task_id'])
+      sql = sql[:-1]
+      sql += " WHERE pt.id = ?"
+    else:
+      return Response("Unknown Error", mimetype="text/plain", status=400)
 
-  # run query and store the result(rowcount) in result variable
-  result = dbh.run_query(sql, params)
+    # run query and store the result(rowcount) in result variable
+    result = dbh.run_query(sql, params)
 
-  # error check
-  if(result['success'] == False):
-    return result['error']
+    # error check
+    if(result['success'] == False):
+      return result['error']
+
+  if(parsed_args['old_index'] != None and parsed_args['old_lane_id'] != None):
+    lane_result = dbh.run_query(
+        "SELECT pl.task_order FROM project_lanes pl WHERE pl.id = ?", [parsed_args['old_lane_id'], ])
+    if(lane_result['success'] == False):
+      return lane_result['error']
+
+    lane_order = json.loads(lane_result['data'][0]['task_order'])
+
+    lane_order.pop(parsed_args['old_index'])
+
+    lane_order_json = json.dumps(lane_order)
+
+    lane_order_result = dbh.run_query("UPDATE project_lanes pl SET pl.task_order = ? WHERE pl.id = ?", [
+                                      lane_order_json, parsed_args['old_lane_id']])
+
+    if(lane_order_result['success'] == False):
+      return lane_order_result['error']
+
+  if(parsed_args['new_index'] != None and parsed_args['lane_id'] != None):
+    lane_result = dbh.run_query(
+        "SELECT pl.task_order FROM project_lanes pl WHERE pl.id = ?", [parsed_args['lane_id']])
+    if(lane_result['success'] == False):
+      return lane_result['error']
+
+    lane_order = json.loads(lane_result['data'][0]['task_order'])
+
+    lane_order.insert(parsed_args['new_index'], parsed_args['task_id'])
+
+    lane_order_json = json.dumps(lane_order)
+
+    lane_order_result = dbh.run_query("UPDATE project_lanes pl SET pl.task_order = ? WHERE pl.id = ?", [
+                                      lane_order_json, parsed_args['lane_id']])
+
+    if(lane_order_result['success'] == False):
+      return lane_order_result['error']
 
   # after success from above, get all project data for the endpoint to return.
   updated_task_info = dbh.run_query(
-      'SELECT pt.id, pt.lane_id, pt.title, pt.description, pt.created_at FROM project_tasks pt WHERE pt.id = ?', [parsed_args['task_id'], ])
+      'SELECT pt.id, pt.lane_id, pt.title, pt.description, pt.created_at, pt.accent_hex FROM project_tasks pt WHERE pt.id = ?', [parsed_args['task_id'], ])
 
   # error check for above statement.
   if(updated_task_info['success'] == False):
@@ -202,6 +262,11 @@ def delete_task():
           'required': True,
           'name': 'login_token',
           'type': str
+      },
+      {
+          'required': False,
+          'name': 'lane_id',
+          'type': int
       }
   ]
   parsed_args = dbh.input_handler(request.json, arg_scheme)
@@ -221,6 +286,25 @@ def delete_task():
 
   # if data key from the above query = 1 (rowcount) return response (no content), else auth error.
   if(result['data'] == 1):
+    if(parsed_args['lane_id'] != None):
+      task_order_result = dbh.run_query(
+          "SELECT task_order FROM project_lanes WHERE id = ?", [parsed_args['lane_id'], ])
+      if(task_order_result['success'] == False):
+        return task_order_result['error']
+
+      task_order = json.loads(
+          task_order_result['data'][0]['task_order'])
+
+      print(task_order)
+      print(parsed_args['task_id'])
+      task_order.remove(parsed_args['task_id'])
+
+      lane_result = dbh.run_query(
+          "UPDATE project_lanes SET task_order = ? WHERE id = ?", [json.dumps(task_order), parsed_args['lane_id']])
+
+      if(lane_result['success'] == False):
+        return lane_result['error']
+
     return Response(status=204)
   else:
     return Response("Authentication Error", mimetype="text/plain", status=403)

@@ -154,7 +154,7 @@ def list_accepted_projects():
 
   # store return of this select query in the result variable, will be either list of projects the user has accepted access to
   #  or an empty list.
-  result = dbh.run_query("SELECT p.id, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN sessions s ON pr.user_id = s.user_id WHERE pr.accepted = 1 AND s.token = ? and p.owner_id != s.user_id", [
+  result = dbh.run_query("SELECT p.id AS project_id, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN sessions s ON pr.user_id = s.user_id WHERE pr.accepted = 1 AND s.token = ? and p.owner_id != s.user_id", [
                          parsed_args['login_token'], ])
 
   # error check
@@ -212,7 +212,7 @@ def get_project():
     return lanes_result['error']
 
   tasks_result = dbh.run_query(
-      "SELECT pt.id, pt.title, pt.description, pt.lane_id, pt.created_at FROM project_tasks pt INNER JOIN project_lanes pl ON pt.lane_id = pl.id WHERE pl.project_id = ?", [parsed_args['project_id'], ])
+      "SELECT pt.id, pt.title, pt.description, pt.lane_id, pt.accent_hex, pt.created_at FROM project_tasks pt INNER JOIN project_lanes pl ON pt.lane_id = pl.id WHERE pl.project_id = ?", [parsed_args['project_id'], ])
 
   if(tasks_result['success'] == False):
     return tasks_result['error']

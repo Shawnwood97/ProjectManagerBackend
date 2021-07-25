@@ -82,8 +82,8 @@ def invite_user():
     return Response("User doesn't exist.", mimetype="text/plain", status=404)
 
   # validation to check if the user already has a pending request for the project_id.
-  check_dupe_info = dbh.run_query("SELECT pr.user_id FROM project_roles pr INNER JOIN projects p ON pr.project_id = p.id WHERE pr.accepted = 0 AND pr.user_id = ?", [
-                                  user_info['data'][0]['id'], ])
+  check_dupe_info = dbh.run_query("SELECT pr.user_id FROM project_roles pr INNER JOIN projects p ON pr.project_id = p.id WHERE pr.accepted = 0 AND pr.user_id = ? AND p.id = ?", [
+                                  user_info['data'][0]['id'], parsed_args['project_id']])
 
   # error check
   if(check_dupe_info['success'] == False):
@@ -135,7 +135,7 @@ def list_pending_invites():
 
   # store return of this select query in the result variable, will be either list of projects the user has been invited to access, but has
   # not accepted or declined or an empty list.
-  result = dbh.run_query("SELECT p.id, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN sessions s ON pr.user_id = s.user_id WHERE pr.accepted = 0 AND s.token = ?", [
+  result = dbh.run_query("SELECT p.id, u.username, ur.name AS role_name, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN user_roles ur ON pr.role_id = ur.id INNER JOIN sessions s ON pr.user_id = s.user_id INNER JOIN users u ON p.owner_id = u.id WHERE pr.accepted = 0 AND s.token = ?", [
                          parsed_args['login_token'], ])
 
   # error check
@@ -180,7 +180,7 @@ def invite_response():
   # Validated with login token on the project roles user_id, as well only selects a row that has an accepted column of 0(pending)
   # based on our logic from sending the invite, there can only be 1 row for each project and user combination that has an accepted
   # row of 0.
-  project_inv_info = dbh.run_query("SELECT pr.id, pr.project_id, pr.user_id, pr.role_id, pr.accepted, pr.created_at FROM project_roles pr INNER JOIN sessions s ON pr.user_id = s.user_id WHERE s.token = ? AND pr.project_id = ? AND pr.accepted = 0", [
+  project_inv_info = dbh.run_query("SELECT pr.id, pr.project_id, pr.user_id, pr.role_id, pr.accepted, pr.created_at, p.title FROM project_roles pr INNER JOIN projects p ON pr.project_id = p.id INNER JOIN sessions s ON pr.user_id = s.user_id WHERE s.token = ? AND pr.project_id = ? AND pr.accepted = 0", [
                                    parsed_args['login_token'], parsed_args['project_id']])
 
   # error check
