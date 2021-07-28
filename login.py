@@ -102,7 +102,7 @@ def login_user():
   # if login info data list has a length of 1, create the json return, else error.
   if(len(login_info['data']) == 1):
     # add login token into the first index in the data dict for API return purposes.
-    login_info['data'][0].update({'loginToken': login_token})
+    login_info['data'][0].update({'login_token': login_token})
     updated_login_json = json.dumps(login_info['data'][0], default=str)
     return Response(updated_login_json, mimetype="application/json", status=201)
   else:

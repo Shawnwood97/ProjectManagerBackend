@@ -49,7 +49,7 @@ def create_lane():
   # if we get passed the above conditional, the user has permission, so we insert the data into the project_lanes table.
   result = dbh.run_query("INSERT INTO project_lanes (title, project_id) VALUES (?,?)", [
                          parsed_args['title'], parsed_args['project_id']])
-
+  print(result['data'])
   # error check insert query
   if(result['success'] == False):
     return result['error']
@@ -58,9 +58,11 @@ def create_lane():
   if(result['data'] > 0):
     new_lane_json = json.dumps(
         {
-            'id': user_result['data'][0]['user_id'],
+            'id': result['data'],
             'project_id': parsed_args['project_id'],
             'title': parsed_args['title'],
+            'tasks': [],
+            'task_order': '[]',
             'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         },
         default=str
@@ -86,7 +88,17 @@ def update_lane():
           'required': False,
           'name': 'title',
           'type': str
-      }
+      },
+      {
+          'required': False,
+          'name': 'old_index',
+          'type': int
+      },
+      {
+          'required': False,
+          'name': 'new_index',
+          'type': int
+      },
   ]
   parsed_args = dbh.input_handler(request.json, arg_scheme)
 
@@ -122,23 +134,43 @@ def update_lane():
   # remove the trailing comma from the above sql blocks
   # add WHERE clause to sql statement.
   # else, error.
-  if(len(params) != 0):
-    params.append(parsed_args['lane_id'])
-    sql = sql[:-1]
-    sql += " WHERE pl.id = ?"
-  else:
-    return Response("Unknown Error", mimetype="text/plain", status=400)
+    if(len(params) != 0):
+      params.append(parsed_args['lane_id'])
+      sql = sql[:-1]
+      sql += " WHERE pl.id = ?"
 
-  # run query and store the result(rowcount) in result variable
-  result = dbh.run_query(sql, params)
+      # run query and store the result(rowcount) in result variable
+      result = dbh.run_query(sql, params)
 
   # error check
-  if(result['success'] == False):
-    return result['error']
+      if(result['success'] == False):
+        return result['error']
+    else:
+      return Response("Unknown Error", mimetype="text/plain", status=400)
+
+  if(parsed_args['old_index'] != None and parsed_args['new_index'] != None):
+    lanes_result = dbh.run_query(
+        "SELECT p.lane_order FROM projects p WHERE p.id = ?", [user_result['data'][0]['project_id'], ])
+    if(lanes_result['success'] == False):
+      return lanes_result['error']
+
+    lanes_order = json.loads(lanes_result['data'][0]['lane_order'])
+
+    lanes_order.pop(parsed_args['old_index'])
+
+    lanes_order.insert(parsed_args['new_index'], parsed_args['lane_id'])
+
+    lanes_order_json = json.dumps(lanes_order)
+
+    lanes_order_result = dbh.run_query("UPDATE projects p SET p.lane_order = ? WHERE p.id = ?", [
+        lanes_order_json, user_result['data'][0]['project_id']])
+
+    if(lanes_order_result['success'] == False):
+      return lanes_order_result['error']
 
   # after success from above, get all project data for the endpoint to return.
   updated_lane_info = dbh.run_query(
-      'SELECT pl.id, pl.title, pl.created_at FROM project_lanes pl WHERE pl.id = ?', [parsed_args['lane_id'], ])
+      'SELECT pl.id, pl.title, pl.created_at, p.lane_order FROM project_lanes pl INNER JOIN projects p ON pl.project_id = p.id WHERE pl.id = ?', [parsed_args['lane_id'], ])
 
   # error check for above statement.
   if(updated_lane_info['success'] == False):

@@ -61,7 +61,8 @@ def create_project():
             'id': result['data'],
             'owner_id': user_result['data'][0]['id'],
             'title': parsed_args['title'],
-            'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'lane_order': "[]"
         },
         default=str
     )
@@ -177,11 +178,13 @@ def get_project():
       },
       {
           'required': True,
-          'name': 'login_token',
+          'name': 'Login-Token',
           'type': str
       }
   ]
-  parsed_args = dbh.input_handler(request.args, arg_scheme)
+  args = request.args.copy()
+  args.update(request.headers)
+  parsed_args = dbh.input_handler(args, arg_scheme)
 
   if(parsed_args['success'] == False):
     return parsed_args['error']
@@ -190,7 +193,7 @@ def get_project():
 
   # select query to validate the user is allowed to see lanes in a project.
   user_result = dbh.run_query("SELECT ur.can_edit FROM sessions s INNER JOIN project_roles pr ON s.user_id = pr.user_id INNER JOIN user_roles ur ON pr.role_id = ur.id WHERE s.token = ? AND pr.project_id = ?", [
-                              parsed_args['login_token'], parsed_args['project_id']])
+                              parsed_args['Login-Token'], parsed_args['project_id']])
 
   # error check
   if(user_result['success'] == False):
@@ -255,7 +258,17 @@ def update_project():
           'required': False,
           'name': 'title',
           'type': str
-      }
+      },
+      {
+          'required': False,
+          'name': 'new_index',
+          'type': int
+      },
+      {
+          'required': False,
+          'name': 'old_index',
+          'type': int
+      },
   ]
   parsed_args = dbh.input_handler(request.json, arg_scheme)
 

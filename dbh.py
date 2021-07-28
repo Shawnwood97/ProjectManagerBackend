@@ -119,7 +119,7 @@ def input_handler(endpoint_args, u_inputs=[]):
 
       # if the user input is required, we add a key value pair inside the data dictionary in payload. key will be the value from name, and value will be
       # the the value of name as a key in endpoint_args, wrapped in the type value.
-      # ie: loginToken: str(request.json['loginToken'])
+      # ie: login_token: str(request.json['login_token'])
       if(u_input['required'] == True):
         payload['data'][u_input['name']] = u_input['type'](
             endpoint_args[u_input['name']])

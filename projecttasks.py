@@ -80,7 +80,8 @@ def create_task():
             'lane_id': parsed_args['lane_id'],
             'title': parsed_args['title'],
             'description': parsed_args['description'],
-            'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'accent_hex': 'FFFFFFFF'
         },
         default=str
     )
@@ -184,8 +185,8 @@ def update_task():
       params.append(parsed_args['task_id'])
       sql = sql[:-1]
       sql += " WHERE pt.id = ?"
-    else:
-      return Response("Unknown Error", mimetype="text/plain", status=400)
+    # else:
+    #   return Response("Unknown Error", mimetype="text/plain", status=400)
 
     # run query and store the result(rowcount) in result variable
     result = dbh.run_query(sql, params)
