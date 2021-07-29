@@ -56,6 +56,23 @@ def create_lane():
 
   # if the data key of the result variable is greater than 0(lastrowid), return data back to the user
   if(result['data'] > 0):
+
+    lane_order_result = dbh.run_query(
+        "SELECT p.lane_order FROM projects p WHERE p.id = ?", [parsed_args['project_id'], ])
+    if(lane_order_result['success'] == False):
+      return lane_order_result['error']
+
+    lane_order = json.loads(
+        lane_order_result['data'][0]['lane_order'])
+
+    lane_order.append(result['data'])
+
+    lane_result = dbh.run_query(
+        "UPDATE projects SET lane_order = ? WHERE id = ?", [json.dumps(lane_order), parsed_args['project_id']])
+
+    if(lane_result['success'] == False):
+      return lane_result['error']
+
     new_lane_json = json.dumps(
         {
             'id': result['data'],

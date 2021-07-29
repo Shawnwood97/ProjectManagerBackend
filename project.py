@@ -112,11 +112,13 @@ def list_owned_projects():
   arg_scheme = [
       {
           'required': True,
-          'name': 'login_token',
+          'name': 'Login-Token',
           'type': str
       }
   ]
-  parsed_args = dbh.input_handler(request.args, arg_scheme)
+  args = request.args.copy()
+  args.update(request.headers)
+  parsed_args = dbh.input_handler(args, arg_scheme)
 
   if(parsed_args['success'] == False):
     return parsed_args['error']
@@ -125,7 +127,7 @@ def list_owned_projects():
 
   # store return of this select query in the result variable, we will return, will either be validated owners projects or an empty list.
   result = dbh.run_query("SELECT p.id, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN sessions s ON p.owner_id = s.user_id WHERE s.token = ?", [
-                         parsed_args['login_token'], ])
+                         parsed_args['Login-Token'], ])
 
   # error check
   if(result['success'] == False):
@@ -142,11 +144,13 @@ def list_accepted_projects():
   arg_scheme = [
       {
           'required': True,
-          'name': 'login_token',
+          'name': 'Login-Token',
           'type': str
       }
   ]
-  parsed_args = dbh.input_handler(request.args, arg_scheme)
+  args = request.args.copy()
+  args.update(request.headers)
+  parsed_args = dbh.input_handler(args, arg_scheme)
 
   if(parsed_args['success'] == False):
     return parsed_args['error']
@@ -156,7 +160,7 @@ def list_accepted_projects():
   # store return of this select query in the result variable, will be either list of projects the user has accepted access to
   #  or an empty list.
   result = dbh.run_query("SELECT p.id AS project_id, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN sessions s ON pr.user_id = s.user_id WHERE pr.accepted = 1 AND s.token = ? and p.owner_id != s.user_id", [
-                         parsed_args['login_token'], ])
+                         parsed_args['Login-Token'], ])
 
   # error check
   if(result['success'] == False):
@@ -202,7 +206,7 @@ def get_project():
   if(len(user_result['data']) != 1):
     return Response("Authorization Error", mimetype="text/plain", status=403)
 
-  project_result = dbh.run_query("SELECT p.id, p.title, p.owner_id, p.created_at FROM projects p WHERE p.id = ?", [
+  project_result = dbh.run_query("SELECT p.id, p.title, p.owner_id, p.created_at, p.lane_order FROM projects p WHERE p.id = ?", [
                                  parsed_args['project_id'], ])
 
   if(project_result['success'] == False):
@@ -221,6 +225,7 @@ def get_project():
     return tasks_result['error']
 
   for lane in lanes_result['data']:
+    # lane.update({'can_edit': user_result['data'][0]['can_edit']})
     lane['tasks'] = []
     for task in tasks_result['data']:
       if(task['lane_id'] == lane['id']):
@@ -232,6 +237,7 @@ def get_project():
           'can_edit': user_result['data'][0]['can_edit'],
           'title': project_result['data'][0]['title'],
           'owner': project_result['data'][0]['owner_id'],
+          'lane_order': project_result['data'][0]['lane_order'],
           'created_at': project_result['data'][0]['created_at'],
           'lanes': lanes_result['data']
       },

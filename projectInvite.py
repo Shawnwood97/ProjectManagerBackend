@@ -122,11 +122,13 @@ def list_pending_invites():
   arg_scheme = [
       {
           'required': True,
-          'name': 'login_token',
+          'name': 'Login-Token',
           'type': str
       }
   ]
-  parsed_args = dbh.input_handler(request.args, arg_scheme)
+  args = request.args.copy()
+  args.update(request.headers)
+  parsed_args = dbh.input_handler(args, arg_scheme)
 
   if(parsed_args['success'] == False):
     return parsed_args['error']
@@ -136,7 +138,7 @@ def list_pending_invites():
   # store return of this select query in the result variable, will be either list of projects the user has been invited to access, but has
   # not accepted or declined or an empty list.
   result = dbh.run_query("SELECT p.id, u.username, ur.name AS role_name, p.title, p.owner_id, p.created_at FROM projects p INNER JOIN project_roles pr ON p.id = pr.project_id INNER JOIN user_roles ur ON pr.role_id = ur.id INNER JOIN sessions s ON pr.user_id = s.user_id INNER JOIN users u ON p.owner_id = u.id WHERE pr.accepted = 0 AND s.token = ?", [
-                         parsed_args['login_token'], ])
+                         parsed_args['Login-Token'], ])
 
   # error check
   if(result['success'] == False):
