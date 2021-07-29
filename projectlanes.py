@@ -217,7 +217,13 @@ def delete_lane():
           'required': True,
           'name': 'login_token',
           'type': str
-      }
+      },
+      {
+          'required': False,
+          'name': 'project_id',
+          'type': int
+      },
+
   ]
   parsed_args = dbh.input_handler(request.json, arg_scheme)
 
@@ -233,6 +239,26 @@ def delete_lane():
   # error check
   if(result['success'] == False):
     return result['error']
+
+  if(result['data'] == 1):
+    if(parsed_args['project_id'] != None):
+      lane_order_result = dbh.run_query(
+          "SELECT lane_order FROM projects WHERE id = ?", [parsed_args['project_id'], ])
+      if(lane_order_result['success'] == False):
+        return lane_order_result['error']
+
+      lane_order = json.loads(
+          lane_order_result['data'][0]['lane_order'])
+
+      print(lane_order)
+      print(parsed_args['lane_id'])
+      lane_order.remove(parsed_args['lane_id'])
+
+      lane_result = dbh.run_query(
+          "UPDATE projects SET lane_order = ? WHERE id = ?", [json.dumps(lane_order), parsed_args['project_id']])
+
+      if(lane_result['success'] == False):
+        return lane_result['error']
 
   # if data key from the above query = 1 (rowcount) return response (no content), else auth error.
   if(result['data'] == 1):

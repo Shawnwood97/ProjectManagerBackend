@@ -212,7 +212,7 @@ def get_project():
   if(project_result['success'] == False):
     return project_result['error']
 
-  lanes_result = dbh.run_query("SELECT pl.id, pl.title, pl.task_order, pl.created_at FROM project_lanes pl WHERE pl.project_id = ?", [
+  lanes_result = dbh.run_query("SELECT pl.id, pl.title, pl.task_order, pl.project_id, pl.created_at FROM project_lanes pl WHERE pl.project_id = ?", [
                                parsed_args['project_id'], ])
 
   if(lanes_result['success'] == False):
