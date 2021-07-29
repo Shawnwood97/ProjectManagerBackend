@@ -85,7 +85,7 @@ def invite_user():
   check_dupe_info = dbh.run_query("SELECT pr.user_id FROM project_roles pr INNER JOIN projects p ON pr.project_id = p.id WHERE pr.accepted = 0 AND pr.user_id = ? AND p.id = ?", [
                                   user_info['data'][0]['id'], parsed_args['project_id']])
 
-  # error check
+  # #error check
   if(check_dupe_info['success'] == False):
     return check_dupe_info['error']
 
