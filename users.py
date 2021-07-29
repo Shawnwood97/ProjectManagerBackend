@@ -91,19 +91,21 @@ def list_user():
   arg_scheme = [
       {
           'required': True,
-          'name': 'user_id',
-          'type': int
+          'name': 'Login-Token',
+          'type': str
       }
   ]
-  parsed_args = dbh.input_handler(request.args, arg_scheme)
+  args = request.args.copy()
+  args.update(request.headers)
+  parsed_args = dbh.input_handler(args, arg_scheme)
 
   if(parsed_args['success'] == False):
     return parsed_args['error']
   else:
     parsed_args = parsed_args['data']
 
-  result = dbh.run_query('SELECT id, u.username, u.email, u.status, u.avatar, u.created_at FROM users u WHERE u.id = ?', [
-                         parsed_args['user_id'], ])
+  result = dbh.run_query('SELECT u.id, u.username, u.email, u.status, u.avatar, u.created_at FROM users u INNER JOIN sessions s ON u.id = s.user_id WHERE s.token = ?', [
+                         parsed_args['Login-Token'], ])
 
   # error check on above query
   if(result['success'] == False):
